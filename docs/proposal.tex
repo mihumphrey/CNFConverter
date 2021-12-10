@@ -1,0 +1,215 @@
+\documentclass[12pt]{report}
+\usepackage[a4paper]{geometry}
+\usepackage{xcolor}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\SetKwInput{KwInput}{Input}                % Set the Input
+\SetKwInput{KwOutput}{Output}              % set the Output
+
+
+\newcommand{\HRule}[1]{\rule{\linewidth}{#1}}
+\setcounter{section}{-1}
+\renewcommand{\thesection}{\arabic{section}}
+
+
+%-------------------------------------------------------------------------------
+% TITLE PAGE
+%-------------------------------------------------------------------------------
+
+\begin{document}
+
+\title{ \normalsize \textsc{}
+		\\ [2.0cm]
+		\HRule{0.5pt} \\
+		\LARGE \textbf{\uppercase{Project Proposal}
+		\HRule{2pt} \\ [0.5cm]
+		\normalsize \today \vspace*{5\baselineskip}}
+}
+
+\date{}
+
+\author{
+		Michael Humphrey\\
+		Colorado School of Mines \\
+		CSCI598 Program Verification and Synthesis }
+
+\maketitle
+\newpage
+
+%-------------------------------------------------------------------------------
+% BODY
+%-------------------------------------------------------------------------------
+\section*{Introduction}
+Converting First Order Logic propositions to Conjunctive Normal Form (CNF) allows for easier solving of logical propositions and allows for faster evaluation of complex expressions by simplifying them to a more standardized form. For this reason, I propose to build a CNF solver that converts complex First Order Logical expressions to CNF. This CNF solver will be able to take many of the common connectives used in first order logic (Conjunctions, Disjunctions, Negations, Implications, and Biconditionals). These will be parsed in using standard representations of these connectives. For example:
+
+\begin{itemize}
+    \item Conjunction: $\land, \&, AND$
+    \item Disjunction: $\lor, |, OR$
+    \item Negation: $\lnot, !, NOT$
+    \item Implication: $\Rightarrow, =>, IMPLIES$
+    \item Biconditional: $\Leftrightarrow, <=>, IFF$
+\end{itemize}
+
+\noindent Each of these symbols will be able to be detected to make the solver more general and able to operate on more propositions.\\
+
+\noindent These connectives will be expected to be in the following forms:
+
+\begin{itemize}
+    \item Binary Connectives (Conjunction, Disjunction, Implication, Biconditional): $(\phi) f (\psi)$ where $\phi$ and $\psi$ are the expressions of the connective, and $f$ is the connective itself.
+    \item Unary Connectives (Negation): $f (\phi)$ where $f$ is the connective and $\phi$ is the operator.
+\end{itemize}
+
+\noindent Additionally, for simplicity's sake, my CNF solver will expect the inputs to be fully parenthesized, and will output a fully parenthesized CNF version of this proposition. This CNF solver will be written as a multi-threaded python program and will be written using best practices of python. Although performance is not the primary goal of this project, it will be considered during development.
+
+\section*{Proposed Approach}
+My approach will be very similar to the algorithm described in lecture. It will similarly consist of three steps: implication elimination, conversion to Negation Normal Form (NNF) and finally, conversion from NNF to CNF. The algorithms for each are illustrated below: \\
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\Ff{E}}{
+  \If{$term(E)$}
+    {
+        \KwRet $E$
+    }
+    \ElseIf{$\sigma = Implication$}
+    {
+    	\KwRet $E(f(\phi), \lor, f(E(\lnot, \psi)))$
+    }
+    
+    \KwRet $E(f(\phi), \sigma, f(\psi))$ 
+}
+\KwRet $f(E)$
+\caption{ImpElim}
+\end{algorithm}\\
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\Ff{E}}{
+  \If{$term(E)$}
+    {
+        \KwRet $E$
+    }
+    \ElseIf{$\sigma = Biconditional$}
+    {
+    	\KwRet $E(f(ImpElim(\phi, \Rightarrow, \psi)), \land, f(ImpElim(\psi, \Rightarrow, \phi)))$
+    }
+    
+    \KwRet $E(f(\phi), \sigma, f(\psi))$ 
+}
+\KwRet $f(E)$
+\caption{BiconElim}
+\end{algorithm}
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\Ff{E}}{
+    \If{$term(E)$}
+    {
+    \KwRet $E$
+    }
+    \ElseIf{$E = (\lnot, E(\lnot, E(\phi, \sigma, \psi)))$}
+    {
+    \KwRet $f(\psi)$
+    }
+    \ElseIf{$E = (\lnot, E(\phi,\lor, \psi))$}
+    {
+    \KwRet $f(E(\lnot, \phi)), \land, f(E(\lnot, \phi))$
+    }
+    \ElseIf{$E = (\lnot, E(\phi,\land, \psi))$}
+    {
+    \KwRet $f(E(\lnot, \phi)), \lor, f(E(\lnot, \phi))$
+    }
+    \KwRet $f(\phi, \sigma, \psi)$
+    
+}
+\KwRet $f(E)$
+\caption{NNF}
+
+\end{algorithm}
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{FDist}{Dist}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\FDist{E_1, E_2}}{
+    \If{$E_1 = (\phi, \land, \psi), E_2 = \_\_$}
+    {
+        \KwRet $E(dist(\phi, E_2) \land dist(\psi, \land, E_2))$
+    }
+    \ElseIf{$E_1 = \_\_, E_2 = (\phi, \land, \psi$}
+    {
+        \KwRet $E(dist(E_1, \phi), \land, dist(E_1, \psi))$
+    }
+    \KwRet $E(E_1, \lor, E_2)$
+}
+
+\Fn{\Ff{E}}{
+    \If{$term(E)$}
+    {
+        \KwRet $E$
+    }
+    \ElseIf{$E = (\phi, \land, \psi)$}
+    {
+        \KwRet $E(f(\phi), \land, f(\psi))$
+    }
+    \KwRet $dist(f(\phi), f(\psi))$
+}
+\KwRet $f(E)$
+\caption{CNF}
+\end{algorithm}
+
+
+\section*{Examples}
+\noindent INPUT: \\
+$\lnot (p \RightArrow  (\lnot (q \land (\lnot p \RightArrow  q))))$\\
+
+\noindent Implication Elimination:\\
+$\lnot (p \RightArrow  (\lnot (q \land (\lnot p \RightArrow  q))))$ // input\\
+$\lnot (\lnot p \lor (\lnot (q \land (\lnot \lnot p \lor q))))$     // replace implications with disjunctions\\
+
+\noindent NNF:\\
+$\lnot (\lnot p \lor (\lnot (q \land (\lnot \lnot p \lor q))))$     // input \\
+$\lnot (\lnot p \lor (\lnot (q \land (p \lor q))))$                 // remove double negation\\
+$(\lnot \lnot p \land \lnot (\lnot (q \land (p \lor q))))$          // propagate negation\\
+$(\lnot \lnot p \land (\lnot \lnot (q \land (p \lor q))))$          // simplify expression\\
+$(p \land (q \land (p \lor q)))$                                    // remove double negations\\
+
+\noindent CNF:\\
+$(p \land (q \land (p \lor q)))$                                    // already in CNF\\
+Note, to be more explicit, this can be de-parenthesized to:\\   
+$(p \land q \land (p \lor q))$                                      // remove unneeded parenthesis\\
+Similarly, to be completely explicitly in CNF:\\
+$((p \lor \bot) \land (q \lor \bot) \land (p \lor q))$              // add implicit False disjunctions\\
+
+\section*{Proposed Evaluation}
+I plan to evaluate my program using a testing script that will test  each component of the program (Removing Negations, Performing DeMorgan's, and Applying the Distributive property) as well as testing the program as a whole. This will be done using a testing shell script that executes the program on many different inputs, and expects the output to match a precomputed value. This evaluation will be written most likely as a shell script. Below is an example of a given input and output for each step of the algorithm.\\
+
+\noindent INPUT:\\
+\noindent $\lnot(p\Rightarrow (\lnot(q \land (\lnot p \Rightarrow q))))$\\
+
+\noindent Implication Elimination OUTPUT:\\
+\noindent $\lnot (\lnot p \lor (\lnot (q \land (\lnot \lnot p \lor q))))$\\
+
+\noindent Negation Normal Form OUTPUT:\\
+\noindent $(p \land ((q \land (p \lor q))))$\\
+
+\noindent Conjunctive Normal Form OUTPUT:\\
+\noindent $(p \land q \land (p \lor q))$\\
+
+\noindent The testing script will ensure that each of these values match what is outputted by the program. This will be done using simple string comparison.
+
+\end{document}

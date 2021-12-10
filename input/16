@@ -1,0 +1,1 @@
+(NOT ((A) IFF ((B) IFF ((C) IFF ((D) AND ((E) AND ((F) OR (G))))))))
