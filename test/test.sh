@@ -1,6 +1,6 @@
 #!/bin/bash
 make >> /dev/null 2>> /dev/null
-echo "LEN,TIME" > test/data.csv
+echo "SIZE,RUNTIME" > test/data.csv
 N=10
 for file in $(ls input); do
     echo $file

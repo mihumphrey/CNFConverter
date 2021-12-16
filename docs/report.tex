@@ -1,0 +1,245 @@
+\documentclass[12pt]{report}
+\usepackage[a4paper]{geometry}
+\usepackage{xcolor}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\SetKwInput{KwInput}{Input}                % Set the Input
+\SetKwInput{KwOutput}{Output}              % set the Output
+\usepackage{math}
+\usepackage{graphicx}
+\LinesNumbered
+\usepackage{hyperref}
+
+
+\newcommand{\HRule}[1]{\rule{\linewidth}{#1}}
+\setcounter{section}{-1}
+\renewcommand{\thesection}{\arabic{section}}
+
+
+%-------------------------------------------------------------------------------
+% TITLE PAGE
+%-------------------------------------------------------------------------------
+\usepackage{float}
+\begin{document}
+
+\title{ \normalsize \textsc{}
+		\\ [2.0cm]
+		\HRule{0.5pt} \\
+		\LARGE \textbf{\uppercase{Project Report}
+		\HRule{2pt} \\ [0.5cm]
+		\normalsize \today \vspace*{5\baselineskip}}
+}
+
+\date{}
+
+\author{
+		Michael Humphrey\\
+		Colorado School of Mines \\
+		CSCI598 Program Verification and Synthesis }
+\maketitle
+\newpage
+
+%-------------------------------------------------------------------------------
+% TITLE PAGE
+%-------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+% BODY
+%-------------------------------------------------------------------------------
+\section*{Introduction}
+Converting First Order Logic propositions to Conjunctive Normal Form (CNF) allows for easier solving of logical propositions and allows for faster evaluation of complex expressions by simplifying them to a more standardized form. For this reason, I built a CNF solver that converts complex First Order Logical expressions to CNF. This CNF solver handles many of the common connectives used in first order logic (Conjunctions, Disjunctions, Negations, Implications, and Biconditionals). These will be parsed in using standard representations of these connectives. For example:
+
+\begin{itemize}
+    \item Conjunction: $\land, \&, AND$
+    \item Disjunction: $\lor, |, OR$
+    \item Negation: $\lnot, !, NOT$
+    \item Implication: $\Rightarrow, =>, IMPLIES$
+    \item Biconditional: $\Leftrightarrow, <=>, IFF$
+\end{itemize}
+
+\noindent Each of these symbols may detected to make the solver more robust and able to operate on more propositions.\\
+
+\noindent These connectives are expected to be in the following forms:
+
+\begin{itemize}
+    \item Binary Connectives (Conjunction, Disjunction, Implication, Biconditional): $(\phi) f (\psi)$ where $\phi$ and $\psi$ are the expressions of the connective, and $f$ is the connective itself.
+    \item Unary Connectives (Negation): $f (\phi)$ where $f$ is the connective and $\phi$ is the operator.
+\end{itemize}
+
+\noindent Formally, the grammar that will be accepted by this CNF converter is:\\
+\begin{grammar}
+    \bnfprod{exp}{\nonterm{term}}\\
+        \bnfalt{\nonterm{uop} \nonterm{exp}}\\
+        \bnfalt{\nonterm{exp} \nonterm{bop} \nonterm{exp}}\\
+    \bnfprod{uop}{\lnot}\\
+    \bnfprod{bop}{ \land \arrowvert \lor \arrowvert \rightarrow \arrowvert \Leftrightarrow}\\
+\end{grammar}
+
+\noindent Additionally, for simplicity's sake, my CNF solver expects the inputs to be fully parenthesized, and outputs a simplified CNF version of this proposition. This CNF solver was written as a multi-threaded C program using best practices of C. This solver focuses on the performance and usability of the conversion to CNF.\\
+
+\section*{Examples}
+\noindent As stated above, this CNF converter expects it's inputs to be fully parenthesized. Below are a few sample inputs that this program will accept:
+    \begin{itemize}
+        \setlength\itemsep{.1em}
+        \item ((A) AND ((B) OR (C)))
+        \item ((A) IFF ((B) IFF (C)))
+        \item ((NOT (A)) OR ((B) AND (C)))
+        \item ((A) $\rightarrow$ (B))
+        \item $((A) \land ((B) \lor ( \lnot (C))))$
+    \end{itemize}
+\noindent This converter will output the same expression in  CNF in a succinct way that is easy to read, and an end-user will be able to easily decipher. Below are the above expressions converted to CNF.
+
+\begin{itemize}
+    \setlength\itemsep{.1em}
+    \item $ (A) \land (B \lor C)$
+    \item $(\lnot C \lor \lnot B \lor A) \land (\lnot C \lor C \lor A) \land (B \lor \lnot B \lor A) \land (B \lor C \lor A) \land (\lnot A \lor \lnot C \lor B) \land (\lnot A \lor \lnot B \lor C)$
+    \item $(\lnot A \lor C) \land (\lnot A \lor B)$
+    \item $(\lnot A \lor B)$
+    \item $(B \lor \lnot C) \land (A)$
+\end{itemize}
+
+\noindent As can be seen above, the CNF propositions are outputted in a way that makes reading the propositions simple. Internally, the propositions are also stored in a data structure that would allow for very expansion into future work such as a full SAT solver.
+\section*{Approach}
+\noindent This CNF solver uses a very basic algorithm with three major parts: \begin{itemize}
+    \setlength\itemsep{.1em}
+    \item Eliminate biconditional connectives from the expression.
+    \item Eliminate implication connectives from the expression.
+    \item Convert the expression to Negation Normal Form (NNF)
+    \item Convert the NNF expression to CNF
+\end{itemize}
+
+\noindent Each of the algorithms to make these eliminations or conversions are implemented in pseudocode below.
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\Ff{E}}{
+  \If{$term(E)$}
+    {
+        \KwRet $E$
+    }
+    \ElseIf{$\sigma = Implication$}
+    {
+    	\KwRet $(f(\lnot \phi) \lor f(\psi))$
+    }
+    
+    \KwRet $(f(\phi) \sigma f(\psi))$ 
+}
+\KwRet $f(E)$
+\caption{ImpElim}
+\end{algorithm}\\
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\Ff{E}}{
+  \If{$term(E)$}
+    {
+        \KwRet $E$
+    }
+    \ElseIf{$\sigma = Biconditional$}
+    {
+    	\KwRet $(f(ImpElim(\phi \Rightarrow \psi)) \land f(ImpElim(\psi \Rightarrow \phi)))$
+    }
+    
+    \KwRet $E(f(\phi) \sigma f(\psi))$ 
+}
+\KwRet $f(E)$
+\caption{BiconElim}
+\end{algorithm}
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\Ff{E}}{
+    \If{$term(E)$}
+    {
+    \KwRet $E$
+    }
+    \ElseIf{$E = (\lnot (\lnot (E)))$}
+    {
+    \KwRet $f(E)$
+    }
+    \ElseIf{$E = (\lnot (\phi \lor \psi))$}
+    {
+    \KwRet $f(\lnot \phi) \land f(\lnot \phi)$
+    }
+    \ElseIf{$E = (\lnot (\phi\land \psi))$}
+    {
+    \KwRet $f(\lnot \phi) \lor f(\lnot \psi)$
+    }
+    \KwRet $f(\phi \sigma \psi)$
+    
+}
+\KwRet $f(E)$
+\caption{NNF}
+
+\end{algorithm}
+
+\begin{algorithm}[H]
+
+  \KwInput{$E: \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \KwOutput{$E': \phi, \sigma, \psi$ \tcp*{left, op, right}}
+  \SetKwFunction{FDist}{Dist}
+  \SetKwFunction{Ff}{f}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\FDist{E_1, E_2}}{
+    \If{$E_1 = (\phi \land \psi), E_2 = \_\_$}
+    {
+        \KwRet $E(dist(\phi E_2) \land dist(\psi E_2))$
+    }
+    \ElseIf{$E_1 = \_\_, E_2 = (\phi \land \psi$}
+    {
+        \KwRet $(dist(E_1 \phi) \land dist(E_1 \psi))$
+    }
+    \KwRet $(E_1 \lor E_2)$
+}
+
+\Fn{\Ff{E}}{
+    \If{$term(E)$}
+    {
+        \KwRet $E$
+    }
+    \ElseIf{$E = (\phi \land \psi)$}
+    {
+        \KwRet $(f(\phi) \land f(\psi))$
+    }
+    \KwRet $dist(f(\phi), f(\psi))$
+}
+\KwRet $f(E)$
+\caption{CNF}
+\end{algorithm}
+
+
+\section*{Evaluation}
+\noindent This program was evaluated by timing it on a number of inputs, ranging from trivial computations to very complex expressions with up to 100,000 clauses in the finished CNF form. I decided to count the size of an expression as the number of clauses in CNF form as this was the most accurate way to measure it. the alternative, counting the number of expressions of the input expression may be inaccurate as certain expressions (biconditional) expand to two separate expressions. For this reason, the 'size' of an expression will refer to the number of clauses in the converted CNF expression.\\
+
+\noindent The goal of the testing of this program was to determine primarily the runtime of the conversion to CNF. Beyond anecdotal measurement, a secondary goal was to determine if  there was any correlation between the size of an expression and its runtime. The testing procedure for this evaluation was simple: measure the runtime and the input size of a number of different inputs run through the program, logging both the size and runtime.\\
+
+\noindent The size of inputs was built to cover a wide range of expressions, ranging from a size of 1 clause to 100,000 clauses. This allowed for a large enough domain to accurately measure the performance of this CNF converter. \\
+
+\noindent Below is a graph of the runtimes plotted against the size of the input for a sample of 20 inputs. The exact inputs used may be viewed in the input directory of the program.\\
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.5]{RUNTIMEvsSIZE.png}
+    \caption{Runtime vs Size of Expression}
+    \label{fig:my_label}
+\end{figure}
+
+\noindent As can be seen from the above graph, there is some correlation between the runtime of an expression and the size of the expression. Without outliers, this graph is roughly linear. However, adding in the outliers, the graph does not fit to a trendline for any simple complexity. As such, the results of the 180  points on the graph above are relatively inconclusive, but there are certainly parallels to draw between the size of an expression and the runtime to convert to CNF. \\
+
+\noindent Another source of potential error in the graph above could be that some expressions are simpler to compute than others; they have fewer recursive calls to make despite being the same size of expression. As such, it is incredibly difficult to determine a plausible relationship between the runtime and the size of an expression.
+
+\section*{Conclusion}
+
+\noindent This program may be used to convert a variety of propositional logic expressions to CNF quickly and efficiently, with little data cleaning from the user. It will always find a conversion to CNF given enough time and computation power. The source code and documentation for this project may be found on: \href{https://github.com/mihumphrey/CNFConverter}{Github}.
+\end{document}
