@@ -47,8 +47,12 @@ int main(int argc, char **argv) {
     begin = clock();
     e = cnf(e);
     cnft = (double) (clock() - begin) / CLOCKS_PER_SEC;
-    printExpression(e, true);
-    PRINT("\n");
+
+    CNF *head = NULL;
+    head = makeCNF(e, &head);
+    printCNF(head);
+    printf("\n");
+    printf("LEN: %d\n", CNFLen(head));
 
     PRINT("TIME SPENT: \n");
     PRINT("\tPAR: %.10f\n", parset);
@@ -59,11 +63,7 @@ int main(int argc, char **argv) {
     PRINT("TOTAL: %.10f\n", parset + ifft + impt + nnft + cnft);
     PRINT("TOTALNPARSE: %.10f\n", ifft + impt + nnft + cnft);
 
-    CNF *head = NULL;
-    head = makeCNF(e, &head);
-    printCNF(head);
-    printf("\n");
-    printf("LEN: %d\n", CNFLen(head));
+
 
     freeCNF(head);
     freeExpression(e);
